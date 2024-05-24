@@ -5,8 +5,6 @@ interface AppConfig {
   devMode: boolean;
   // The URL of the Zupass server.
   zupassServer: string;
-  // The URL of the FrogCrypto feed host server.
-  frogCryptoServer: string;
   // The amount of time a zuzalu qr code proof is valid for
   maxIdentityProofAgeMs: number;
   // token that allows the client to upload errors to rollbar
@@ -21,6 +19,8 @@ interface AppConfig {
   multiChoiceScanEnabled: boolean;
   // should PODTicketPCDs be visible?
   showPODTicketPCDs: boolean;
+  // shold allow add new subscription?
+  enableSubscription: boolean;
 }
 
 if (
@@ -29,14 +29,6 @@ if (
   !!global.window.alert
 ) {
   alert("PASSPORT_SERVER_URL not set");
-}
-
-if (
-  !process.env.FROGCRYPTO_SERVER_URL &&
-  global.window &&
-  !!global.window.alert
-) {
-  alert("FROGCRYPTO_SERVER_URL not set");
 }
 
 if (
@@ -60,14 +52,14 @@ if (
 export const appConfig: AppConfig = {
   devMode: process.env.NODE_ENV !== "production",
   zupassServer: process.env.PASSPORT_SERVER_URL as string,
-  frogCryptoServer: process.env.FROGCRYPTO_SERVER_URL as string,
   maxIdentityProofAgeMs: ONE_HOUR_MS * 4,
   rollbarToken: process.env.ROLLBAR_TOKEN,
   rollbarEnvName: process.env.ROLLBAR_ENV_NAME,
   strichLicenseKey: process.env.STRICH_LICENSE_KEY,
   scanditLicenseKey: process.env.SCANDIT_LICENSE_KEY,
   multiChoiceScanEnabled: process.env.MULTI_CHOICE_SCAN_ENABLED === "true",
-  showPODTicketPCDs: process.env.SHOW_POD_TICKET_PCDS === "true"
+  showPODTicketPCDs: process.env.SHOW_POD_TICKET_PCDS === "true",
+  enableSubscription: process.env.ENABLE_SUBSCRIPTION === "true",
 };
 
 console.log("App Config: " + JSON.stringify(appConfig));

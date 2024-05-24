@@ -346,8 +346,10 @@ function RouterImpl(): JSX.Element {
             path="checkin-by-id"
             element={<DevconnectCheckinByIdScreen />}
           />
-          <Route path="subscriptions" element={<SubscriptionsScreen />} />
-          <Route path="add-subscription" element={<AddSubscriptionScreen />} />
+          {appConfig.enableSubscription && <>
+            <Route path="subscriptions" element={<SubscriptionsScreen />} />
+            <Route path="add-subscription" element={<AddSubscriptionScreen />} />
+          </>}
           <Route path="telegram" element={<HomeScreen />} />
           <Route path="pond-control" element={<FrogManagerScreen />} />
           <Route path="frogscriptions" element={<FrogSubscriptionScreen />} />

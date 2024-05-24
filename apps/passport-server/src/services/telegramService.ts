@@ -106,11 +106,7 @@ import { DiscordService } from "./discordService";
 import { setError, traced } from "./telemetryService";
 
 const ALLOWED_TICKET_MANAGERS = [
-  "cha0sg0d",
-  "notdavidhuang",
-  "richardyliu",
-  "gubsheep",
-  "chubivan"
+  "hangleang"
 ];
 
 const adminBotChannel = "Admins";

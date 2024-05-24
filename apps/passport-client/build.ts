@@ -28,13 +28,6 @@ const define = {
         )
       }
     : {}),
-  ...(process.env.FROGCRYPTO_SERVER_URL !== undefined
-    ? {
-        "process.env.FROGCRYPTO_SERVER_URL": JSON.stringify(
-          process.env.FROGCRYPTO_SERVER_URL
-        )
-      }
-    : {}),
   ...(process.env.DEFAULT_FEED_URLS !== undefined
     ? {
         "process.env.DEFAULT_FEED_URLS": JSON.stringify(

@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { IoMdSettings } from "react-icons/io";
 import { MdInfo, MdOutlineQrCodeScanner, MdRssFeed } from "react-icons/md";
 import styled from "styled-components";
+import { appConfig } from "../../src/appConfig";
 import { useDispatch, useSubscriptions } from "../../src/appHooks";
 import { AppState } from "../../src/state";
 import { CircleButton } from "../core/Button";
@@ -52,7 +53,7 @@ function AppHeaderImpl({
       {children}
       {!isProveOrAddScreen && (
         <>
-          <CircleButton diameter={34} padding={8} onClick={openSubscriptions}>
+          {appConfig.enableSubscription && <CircleButton diameter={34} padding={8} onClick={openSubscriptions}>
             {subscriptions.value.getAllErrors().size > 0 && (
               <ErrorDotContainer>
                 <ErrorDot />
@@ -62,7 +63,7 @@ function AppHeaderImpl({
               size={34}
               color={isEdgeCity ? "white" : "var(--accent-lite)"}
             />
-          </CircleButton>
+          </CircleButton>}
           <CircleButton diameter={34} padding={8} onClick={openScanner}>
             <MdOutlineQrCodeScanner
               size={34}
