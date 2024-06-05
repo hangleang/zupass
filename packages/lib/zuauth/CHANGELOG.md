@@ -1,5 +1,29 @@
 # @pcd/zuauth
 
+## 1.3.5
+
+### Patch Changes
+
+- Updated Esmeralda config
+
+## 1.3.4
+
+### Patch Changes
+
+- Upgrade passport-interface dependency
+
+## 1.3.3
+
+### Patch Changes
+
+- Add Edge Esmeralda config
+
+## 1.3.2
+
+### Patch Changes
+
+- ETH Prague configuration
+
 ## 1.3.1
 
 ### Patch Changes

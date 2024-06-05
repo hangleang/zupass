@@ -49,7 +49,7 @@ export type GPCPCDArgs = {
 
   /**
    * POD objects to prove about.  These are not revealed by default, but
-   * a redacted version of their entries will become part of the clais of the
+   * a redacted version of their entries will become part of the claims of the
    * resulting proof PCD, as specified by the proof config.
    *
    * See {@link GPCProofConfig} and {@link GPCRevealedClaims} for more
@@ -71,6 +71,13 @@ export type GPCPCDArgs = {
    * by the same user, without revealing the user's identity.
    */
   externalNullifier: StringArgument;
+
+  /**
+   * Optional membership lists, if needed by the proof configuration. This is
+   * always revealed. Taken to be a JSON-serialised string for the same reasons
+   * outlined for `proofConfig` above.
+   */
+  membershipLists: StringArgument;
 
   /**
    * Optional watermark can be any string.  It will be included (by hash) in the

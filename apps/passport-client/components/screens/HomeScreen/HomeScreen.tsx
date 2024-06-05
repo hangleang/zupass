@@ -2,8 +2,9 @@ import {
   EdgeCityFolderName,
   FrogCryptoFolderName
 } from "@pcd/passport-interface";
-import { isRootFolder } from "@pcd/pcd-collection";
+import { isRootFolder, normalizePath } from "@pcd/pcd-collection";
 import React, {
+  ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -11,11 +12,12 @@ import React, {
   useState
 } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import styled from "styled-components";
+import styled, { CSSProperties } from "styled-components";
 import {
   useDispatch,
   useFolders,
   useLoadedIssuedPCDs,
+  usePCDCollection,
   useSelf,
   useVisiblePCDsInFolder
 } from "../../../src/appHooks";
@@ -29,9 +31,11 @@ import { AppHeader } from "../../shared/AppHeader";
 import { LoadingIssuedPCDs } from "../../shared/LoadingIssuedPCDs";
 import { PCDCardList } from "../../shared/PCDCardList";
 import { EdgeCityHome } from "../EdgeCityScreens/EdgeCityHome";
+import { FrogFolder } from "../FrogScreens/FrogFolder";
 import {
   FolderCard,
   FolderDetails,
+  FolderEntryContainer,
   FolderExplorerContainer
 } from "./Folder";
 
@@ -112,8 +116,24 @@ export function HomeScreenImpl(): JSX.Element | null {
     setBrowsingFolder(folder);
   }, []);
 
+  const pcdCollection = usePCDCollection();
   const isRoot = isRootFolder(browsingFolder);
   const isEdgeCity = isEdgeCityFolder(browsingFolder);
+  const shouldShowFrogCrypto = useMemo(() => {
+    const folders = pcdCollection.getAllFolderNames();
+    const goodFolders = [
+      "Edge City",
+      "ETHBerlin 04",
+      "ETHPrague",
+      "Zuzalu '23",
+      "Devconnect",
+      "ZuConnect"
+    ].map(normalizePath);
+    const hasGoodFolder = folders.map(normalizePath).some((f) => {
+      return goodFolders.some((g) => f.startsWith(g));
+    });
+    return hasGoodFolder;
+  }, [pcdCollection]);
 
   // scroll to top when we navigate to this page
   useLayoutEffect(() => {
@@ -176,7 +196,12 @@ export function HomeScreenImpl(): JSX.Element | null {
                       />
                     );
                   })}
-              
+              {isRoot && shouldShowFrogCrypto && (
+                <FrogFolder
+                  Container={FrogFolderContainer}
+                  onFolderClick={onFolderClick}
+                />
+              )}
             </FolderExplorerContainer>
           )}
 
@@ -212,6 +237,22 @@ export function HomeScreenImpl(): JSX.Element | null {
         <Spacer h={24} />
       </AppContainer>
     </>
+  );
+}
+
+function FrogFolderContainer({
+  children,
+  onClick,
+  style
+}: {
+  children?: ReactNode;
+  style: CSSProperties;
+  onClick: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void;
+}): JSX.Element {
+  return (
+    <FolderEntryContainer onClick={onClick} style={style}>
+      {children}
+    </FolderEntryContainer>
   );
 }
 

@@ -1,6 +1,7 @@
 import {
   GPCProofConfig,
   gpcBindConfig,
+  podMembershipListsToSimplifiedJSON,
   serializeGPCProofConfig
 } from "@pcd/gpc";
 import { ArgumentTypeName } from "@pcd/pcd-types";
@@ -26,8 +27,7 @@ export const GPC_NPM_ARTIFACTS_PATH = path.join(
 );
 
 // Key borrowed from https://github.com/iden3/circomlibjs/blob/4f094c5be05c1f0210924a3ab204d8fd8da69f49/test/eddsa.js#L103
-export const privateKey =
-  "0001020304050607080900010203040506070809000102030405060708090001";
+export const privateKey = "AAECAwQFBgcICQABAgMEBQYHCAkAAQIDBAUGBwgJAAE"; // hex 0001020304050607080900010203040506070809000102030405060708090001
 
 export const ownerIdentity = new Identity(
   '["329061722381819402313027227353491409557029289040211387019699013780657641967", "99353161014976810914716773124042455250852206298527174581112949561812190422"]'
@@ -59,9 +59,16 @@ describe("GPCPCD should work", async function () {
           entries: {
             A: { isRevealed: true },
             E: { isRevealed: false, equalsEntry: "pod0.A" },
-            owner: { isRevealed: false, isOwnerID: true }
+            owner: {
+              isRevealed: false,
+              isOwnerID: true,
+              isMemberOf: "admissibleOwners"
+            }
           }
         }
+      },
+      tuples: {
+        pair: { entries: ["pod0.A", "pod0.E"], isMemberOf: "admissiblePairs" }
       }
     };
 
@@ -93,6 +100,22 @@ describe("GPCPCD should work", async function () {
         value: "some watermark",
         argumentType: ArgumentTypeName.String
       },
+      membershipLists: {
+        value: podMembershipListsToSimplifiedJSON({
+          admissibleOwners: [
+            sampleEntries.F,
+            sampleEntries.C,
+            sampleEntries.owner
+          ],
+          admissiblePairs: [
+            [sampleEntries.D, sampleEntries.B],
+            [sampleEntries.A, sampleEntries.E],
+            [sampleEntries.owner, sampleEntries.I],
+            [sampleEntries.J, sampleEntries.H]
+          ]
+        }),
+        argumentType: ArgumentTypeName.String
+      },
       id: {
         argumentType: ArgumentTypeName.String,
         value: uuid()
@@ -109,9 +132,8 @@ describe("GPCPCD should work", async function () {
     expect(gpcPCD.claim.revealed.owner?.externalNullifier).to.not.be.undefined;
     expect(gpcPCD.claim.revealed.owner?.nullifierHash).to.not.be.undefined;
     expect(gpcPCD.claim.revealed.watermark?.value).to.eq("some watermark");
-    // TODO(POD-P2): Revisit this when tuples and lists are in the compiler.
     expect(gpcPCD.claim.config.circuitIdentifier).to.eq(
-      "proto-pod-gpc_1o-5e-6md-0x0l-0x0t"
+      "proto-pod-gpc_3o-10e-8md-2x20l-1x4t"
     );
 
     expect(await GPCPCDPackage.verify(gpcPCD)).to.be.true;

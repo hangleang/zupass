@@ -23,6 +23,7 @@ import {
   podValueHash
 } from "@pcd/pod";
 import { BABY_JUB_NEGATIVE_ONE } from "@pcd/util";
+import _ from "lodash";
 import {
   GPCBoundConfig,
   GPCProofEntryConfig,
@@ -38,6 +39,7 @@ import {
 } from "./gpcTypes";
 import {
   GPCProofMembershipListConfig,
+  LIST_MEMBERSHIP,
   isTupleIdentifier,
   listConfigFromProofConfig,
   makeWatermarkSignal
@@ -360,58 +362,55 @@ function compileProofListMembership<
   paramMaxListElements: number
 ): {
   listComparisonValueIndex: CircuitSignal[];
+  listContainsComparisonValue: CircuitSignal;
   listValidValues: CircuitSignal[][];
 } {
-  // Arrange list names alphabetically.
-  const listNameOrder = Object.keys(listConfig).sort();
-
-  // Do the same for the lists of comparison IDs and string them together.
-  // This takes into account the possibility where different entry (or tuple)
-  // values must lie in the same list, or the case one entry (or tuple) value
-  // must lie in multiple lists.
-  const listIdPairs = listNameOrder
-    .map((listName: PODName): [PODName, PODEntryIdentifier][] =>
-      listConfig[listName].sort().map((elementId) => [listName, elementId])
-    )
-    .flat();
+  // Arrange list element identifiers alphabetically.
+  const listElementIdOrder = (
+    Object.keys(listConfig) as (PODEntryIdentifier | TupleIdentifier)[]
+  ).sort();
 
   // Compile listComparisonValueIndex
-  const unpaddedListComparisonValueIndex = listIdPairs.map((listIdPair) => {
-    const [listName, elementId] = listIdPair;
+  const unpaddedListComparisonValueIndex = listElementIdOrder.map(
+    (elementId) => {
+      const idx = isTupleIdentifier(elementId)
+        ? tupleMap.get(elementId as TupleIdentifier)?.tupleIndex
+        : entryMap.get(elementId)?.entryIndex;
 
-    const idx = isTupleIdentifier(elementId)
-      ? tupleMap.get(elementId as TupleIdentifier)?.tupleIndex
-      : entryMap.get(elementId)?.entryIndex;
+      if (idx === undefined) {
+        throw new Error(`Missing input for identifier ${elementId}.`);
+      }
 
-    if (idx === undefined) {
-      throw new Error(
-        `Missing input for identifier ${elementId} in membership list ${listName}`
-      );
+      return BigInt(idx);
     }
+  );
 
-    return BigInt(idx);
-  });
+  // Compile listContainsComparisonValue
+  const unpaddedListContainsComparisonValue = listElementIdOrder.map(
+    (elementId) => (listConfig[elementId].type === LIST_MEMBERSHIP ? 1n : 0n)
+  );
 
-  // Compile listValidValues
-  const unpaddedListValidValues = listIdPairs
-    .map((pair) => pair[0])
-    .map((listName) => {
-      const unhashedValues = listInput[listName];
+  // Compile listValidValues, making sure to sort the hashed values before
+  // padding.
+  const unpaddedListValidValues = listElementIdOrder.map((elementId) => {
+    const idListConfig = listConfig[elementId];
 
-      const unpaddedHashedValues = Array.isArray(unhashedValues[0])
-        ? (unhashedValues as PODValueTuple[]).map((elements) =>
-            hashTuple(paramTupleArity, elements)
+    // Resolve lists
+    const list = listInput[idListConfig.listIdentifier];
+
+    // Hash list and sort
+    const hashedList = (
+      isTupleIdentifier(elementId)
+        ? (list as PODValueTuple[]).map((element) =>
+            hashTuple(paramTupleArity, element)
           )
-        : (unhashedValues as PODValue[]).map(podValueHash);
+        : (list as PODValue[]).map(podValueHash)
+    ).sort();
 
-      // Pad the list to its capacity by using the first element of the list, which
-      // is OK because the list is really a set. This also avoids false positives.
-      return padArray(
-        unpaddedHashedValues,
-        paramMaxListElements,
-        unpaddedHashedValues[0]
-      );
-    });
+    // Pad the list to its capacity by using the first element of the list, which
+    // is OK because the list is really a set. This also avoids false positives.
+    return padArray(hashedList, paramMaxListElements, hashedList[0]);
+  });
 
   return {
     // Pad with index -1 (mod p), which is a reference to the value 0.
@@ -420,8 +419,14 @@ function compileProofListMembership<
       paramMaxLists,
       BABY_JUB_NEGATIVE_ONE
     ),
-    // Pad with lists of 0s, which amounts to trivially satisfied list membership checks
-    // for those indices used as padding just above.
+    // Pad with 1s, which amounts to a list membership check for those values
+    // corresponding to index -1 (which corresponds to the value 0), cf. the
+    // `listComparisonValueIndex` padding.
+    listContainsComparisonValue: array2Bits(
+      padArray(unpaddedListContainsComparisonValue, paramMaxLists, 1n)
+    ),
+    // Pad with lists of 0s, which amounts to trivially satisfied list
+    // membership checks for those indices used as padding just above.
     listValidValues: padArray(
       unpaddedListValidValues,
       paramMaxLists,
@@ -438,8 +443,7 @@ function compileProofMultiTuples(
   // Concatenate `tupleIndices` field of all tuple map values together and convert
   // the indices to bigints.
   const unpaddedTupleIndices = Array.from(tupleMap.values())
-    .map((info) => info.tupleInputIndices)
-    .flat()
+    .flatMap((info) => info.tupleInputIndices)
     .map((tuple) => tuple.map((n) => BigInt(n)));
 
   return {

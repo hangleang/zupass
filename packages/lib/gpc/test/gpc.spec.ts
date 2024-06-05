@@ -44,7 +44,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
           entries: {
             ticketID: {
               isRevealed: true,
-              ...(includeList ? { isMemberOf: "admissibleTickets" } : {})
+              ...(includeList ? { isNotMemberOf: "inadmissibleTickets" } : {})
             }
           }
         }
@@ -68,10 +68,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
       ...(includeList
         ? {
             membershipLists: {
-              admissibleTickets: [
-                sampleEntries2.ticketID,
-                sampleEntries.otherTicketID
-              ],
+              inadmissibleTickets: [sampleEntries2.attendee, sampleEntries.J],
               ...(includeTuple
                 ? {
                     admissibleTicketPairs: [
@@ -94,7 +91,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
       ...(includeList
         ? {
             membershipLists: {
-              admissibleTickets: [
+              inadmissibleTickets: [
                 sampleEntries2.ticketID,
                 sampleEntries2.ticketID
               ],
@@ -252,7 +249,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
             attendee: {
               isRevealed: false,
               isOwnerID: true,
-              isMemberOf: ["goats", "pigs"]
+              isMemberOf: "goats"
             }
           }
         },
@@ -267,7 +264,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
       tuples: {
         tuple1: {
           entries: ["pod1.G", "pod2.ticketID"],
-          isMemberOf: "list1"
+          isNotMemberOf: "list1"
         },
         tuple2: {
           entries: [
@@ -287,24 +284,22 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
         externalNullifier
       },
       membershipLists: {
-        list1: [[sampleEntries.G, sampleEntries2.ticketID]].concat(
-          [
-            [87, 1],
-            [99, 8],
-            [8273, 0],
-            [0, 0],
-            [12387, 3],
-            [99999, 66],
-            [653, 362374823],
-            [29387, 1236478236],
-            [1238, 9238374],
-            [1, 1],
-            [87, 87]
-          ].map((pair) => [
-            { type: "int", value: BigInt(pair[0]) },
-            { type: "cryptographic", value: BigInt(pair[1]) }
-          ])
-        ),
+        list1: [
+          [87, 1],
+          [99, 8],
+          [8273, 0],
+          [0, 0],
+          [12387, 3],
+          [99999, 66],
+          [653, 362374823],
+          [29387, 1236478236],
+          [1238, 9238374],
+          [1, 1],
+          [87, 87]
+        ].map((pair) => [
+          { type: "int", value: BigInt(pair[0]) },
+          { type: "cryptographic", value: BigInt(pair[1]) }
+        ]) as PODValueTuple[],
         list2: [
           [129384723n, 123746238746n, 1237n, 18239n],
           [1283748973n, 0n, 1n, 2n],
@@ -337,28 +332,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
               value: BigInt(value)
             } as PODCryptographicValue;
           })
-          .concat([sampleEntries2.attendee]),
-        pigs: [
-          28937n,
-          1923847n,
-          1923874293847n,
-          1923819283741928374n,
-          0n,
-          55n,
-          19238471928374n,
-          1n,
-          sampleEntries2.attendee.value,
-          98n,
-          989n,
-          1023948127340918237n,
-          92837498374n,
-          37846773468n
-        ].map((value: bigint) => {
-          return {
-            type: "cryptographic",
-            value
-          } as PODCryptographicValue;
-        })
+          .concat([sampleEntries2.attendee])
       },
       watermark
     };
@@ -431,17 +405,27 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
             pods: {
               somePodName: {
                 entries: {
-                  ticketID: { isRevealed: true, isMemberOf: [] }
+                  ticketID: {
+                    isRevealed: true,
+                    isMemberOf: "specialTickets",
+                    isNotMemberOf: "inadmissibleTickets"
+                  }
                 }
               }
             }
           },
-          proofInputs,
+          {
+            ...proofInputs,
+            membershipLists: {
+              inadmissibleTickets: [sampleEntries2.attendee, sampleEntries.J],
+              specialTickets: [sampleEntries2.ticketID]
+            }
+          },
           GPC_TEST_ARTIFACTS_PATH
         );
       },
-      "TypeError",
-      "The list of lists of valid values for somePodName.ticketID is empty."
+      "Error",
+      "Both membership and non-membership lists are specified in the configuration of somePodName.ticketID."
     );
 
     // Input is illegal.
@@ -469,7 +453,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
                 entries: {
                   ticketID: {
                     isRevealed: true,
-                    isMemberOf: ["admissibleTickets"]
+                    isMemberOf: "admissibleTickets"
                   }
                 }
               }
@@ -514,7 +498,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
                 entries: {
                   ticketID: {
                     isRevealed: true,
-                    isMemberOf: ["admissibleTickets"]
+                    isMemberOf: "admissibleTickets"
                   }
                 }
               }
@@ -557,7 +541,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
                 entries: {
                   ticketID: {
                     isRevealed: true,
-                    isMemberOf: ["admissibleTickets"]
+                    isMemberOf: "admissibleTickets"
                   }
                 }
               }
@@ -580,6 +564,38 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
       },
       "TypeError",
       'Membership list admissibleTickets in input contains element of width 3 while comparison value with identifier "somePodName.ticketID" has width 1.'
+    );
+
+    await expectAsyncError(
+      async () => {
+        await gpcProve(
+          {
+            pods: {
+              somePodName: {
+                entries: {
+                  ticketID: {
+                    isRevealed: true,
+                    isNotMemberOf: "inadmissibleTickets"
+                  }
+                }
+              }
+            }
+          },
+          {
+            ...proofInputs,
+            membershipLists: {
+              inadmissibleTickets: [
+                sampleEntries2.ticketID,
+                sampleEntries.otherTicketID,
+                sampleEntries.G
+              ]
+            }
+          },
+          GPC_TEST_ARTIFACTS_PATH
+        );
+      },
+      "Error",
+      'Comparison value {"type":"cryptographic","value":999} corresponding to identifier "somePodName.ticketID" is a member of list "inadmissibleTickets".'
     );
 
     await expectAsyncError(
@@ -677,6 +693,38 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
       "Bound config must include circuit identifier"
     );
 
+    await expectAsyncError(
+      async () => {
+        await gpcVerify(
+          proof,
+          {
+            ...boundConfig,
+            pods: {
+              somePodName: {
+                entries: {
+                  ticketID: {
+                    isRevealed: true,
+                    isMemberOf: "specialTickets",
+                    isNotMemberOf: "inadmissibleTickets"
+                  }
+                }
+              }
+            }
+          },
+          {
+            ...revealedClaims,
+            membershipLists: {
+              inadmissibleTickets: [sampleEntries2.attendee, sampleEntries.J],
+              specialTickets: [sampleEntries2.ticketID]
+            }
+          },
+          GPC_TEST_ARTIFACTS_PATH
+        );
+      },
+      "Error",
+      "Both membership and non-membership lists are specified in the configuration of somePodName.ticketID."
+    );
+
     // Claims is illegal.
     await expectAsyncError(
       async () => {
@@ -703,14 +751,14 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
             ...revealedClaims2,
             membershipLists: {
               ...revealedClaims2.membershipLists,
-              admissibleTickets: []
+              inadmissibleTickets: []
             }
           },
           GPC_TEST_ARTIFACTS_PATH
         );
       },
       "Error",
-      "Membership list admissibleTickets is empty."
+      "Membership list inadmissibleTickets is empty."
     );
 
     await expectAsyncError(
@@ -800,7 +848,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
         );
       },
       "Error",
-      'Config and input list mismatch.  Configuration expects lists ["admissibleTickets","admissibleTicketPairs"].  Input contains ["admissibleTicketPairs"].'
+      'Config and input list mismatch.  Configuration expects lists ["inadmissibleTickets","admissibleTicketPairs"].  Input contains ["admissibleTicketPairs"].'
     );
   });
 
@@ -912,7 +960,7 @@ describe("gpc library (Compiled test artifacts) should work", async function () 
         membershipLists: {
           admissibleTicketPairs: (revealedClaims2.membershipLists ?? {})
             .admissibleTicketPairs as PODValueTuple[],
-          admissibleTickets: [sampleEntries2.ticketID, sampleEntries.owner]
+          inadmissibleTickets: [sampleEntries2.ticketID, sampleEntries.owner]
         }
       },
       GPC_TEST_ARTIFACTS_PATH

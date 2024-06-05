@@ -714,11 +714,13 @@ export class PretixPipeline implements BasePipeline {
       );
     }
 
-    if (eventData.checkinLists.length > 1) {
-      errors.push(
-        `Event "${eventData.eventInfo.name.en}" (${eventConfig.genericIssuanceId}) has multiple check-in lists`
-      );
-    }
+    // @todo: we should probably allow for multiple check-in lists, and then
+    // we'd need to handle them here.
+    // if (eventData.checkinLists.length > 1) {
+    //   errors.push(
+    //     `Event "${eventData.eventInfo.name.en}" (${eventConfig.genericIssuanceId}) has multiple check-in lists`
+    //   );
+    // }
 
     if (eventData.checkinLists.length < 1) {
       errors.push(
@@ -1028,6 +1030,7 @@ export class PretixPipeline implements BasePipeline {
       eventName: this.atomToEventName(atom),
       ticketName: this.atomToTicketName(atom),
       checkerEmail: undefined,
+      ticketSecret: atom.secret,
 
       // signed fields
       ticketId: atom.id,
@@ -1097,11 +1100,11 @@ export class PretixPipeline implements BasePipeline {
     const ticketCopy: Partial<ITicketData> = { ...ticketData };
     // the reason we remove `timestampSigned` from the cache key
     // is that it changes every time we instantiate `ITicketData`
-    // for a particular devconnect ticket, rendering the caching
-    // ineffective.
+    // for a particular ticket, rendering the caching ineffective.
     delete ticketCopy.timestampSigned;
     const hash = await getHash(
       stable_stringify(ticketCopy) +
+        "2" +
         eddsaPrivateKey +
         pipelineId +
         ticketPCDType
@@ -1689,7 +1692,12 @@ export class PretixPipeline implements BasePipeline {
         }
 
         try {
-          await this.checkinDB.checkIn(this.id, manualTicket.id, new Date());
+          await this.checkinDB.checkIn(
+            this.id,
+            manualTicket.id,
+            new Date(),
+            checkerEmail
+          );
           this.pendingCheckIns.set(manualTicket.id, {
             status: CheckinStatus.Success,
             timestamp: Date.now()
@@ -1862,8 +1870,18 @@ export class PretixPipeline implements BasePipeline {
     return productConfig;
   }
 
-  public static is(p: Pipeline): p is PretixPipeline {
-    return p.type === PipelineType.Pretix;
+  public async getAllTickets(): Promise<{
+    atoms: PretixAtom[];
+    manual: ManualTicket[];
+  }> {
+    return {
+      atoms: await this.db.load(this.id),
+      manual: this.definition.options.manualTickets ?? []
+    };
+  }
+
+  public static is(p: Pipeline | undefined): p is PretixPipeline {
+    return p?.type === PipelineType.Pretix;
   }
 
   /**
